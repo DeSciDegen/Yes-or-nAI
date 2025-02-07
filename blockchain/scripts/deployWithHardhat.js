@@ -36,7 +36,7 @@ async function main() {
     console.log(` Governor Proxy deployed to: ${await governor.getAddress()}`);
 
     // Deploy AgentManager
-    const AgentManager = await ethers.getContractFactory("AgentManager", owner);
+    const AgentManager = await ethers.getContractFactory("AgentManager");
     const agentManager = await AgentManager.deploy();
     await agentManager.waitForDeployment();
     console.log(` AgentManager deployed to: ${await agentManager.getAddress()}`);
