@@ -16,6 +16,7 @@
     "@web3-react/walletconnect-connector": "^6.2.13",
     "@web3-react/walletlink-connector": "^6.2.14",
     "ethers": "^5.7.2",
+    "framer-motion": "^12.4.1",
     "lucide-react": "^0.220.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
