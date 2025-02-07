@@ -42,6 +42,11 @@ describe("AgentManager", () => {
                 .to.be.revertedWith("Agent already exists");
         })
 
+        it("Should revert if user doesn't assigned to an agent", async () => {
+            await expect(agentManager.getAgent(user.address))
+                .to.be.revertedWith("User doesn't have a related agent!");
+        })
+
         it("Check delegation", async () => {
             const tokensToMint = 20;
             await aiDaoToken.mint(user.address, tokensToMint);
