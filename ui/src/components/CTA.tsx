@@ -7,7 +7,7 @@ const CTA: React.FC = () => {
       <div className="container mx-auto px-4 relative z-10">
         <h2 className="text-3xl font-bold mb-4">Ready to get started?</h2>
         <p className="text-xl mb-8 max-w-2xl mx-auto">
-          Create your AI agent now and start experiencing the future of DeFi governance.
+          Create your AI agent now and start experiencing the future of DAO governance.
         </p>
         <button className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded inline-flex items-center transition-colors relative overflow-hidden group">
           <span className="relative z-10">Create an Agent</span>

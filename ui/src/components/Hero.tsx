@@ -40,9 +40,9 @@ const Hero: React.FC = () => {
   return (
     <section className="py-20 text-center relative">
       <div className="container mx-auto px-4">
-        <h1 className="text-5xl font-bold mb-4">AI-Powered DeFi Governance</h1>
+        <h1 className="text-5xl font-bold mb-4">AI-Powered DAO Governance</h1>
         <p className="text-xl mb-8 max-w-2xl mx-auto">
-          Revolutionize your DeFi experience with AI agents that optimize yield, execute cross-chain arbitrage, and
+          Revolutionize your DAO experience with AI agents that optimize yield, execute cross-chain arbitrage, and
           participate in decentralized governance.
         </p>
         <button className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded inline-flex items-center transition-colors">
