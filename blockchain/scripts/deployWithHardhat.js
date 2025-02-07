@@ -7,13 +7,13 @@ const { ethers, upgrades } = require("hardhat");
 
 async function main() {
     const [deployer] = await ethers.getSigners();
-    console.log(`🚀 Deploying contracts with the account: ${deployer.address}`);
+    console.log(` Deploying contracts with the account: ${deployer.address}`);
 
     // Deploy Token
     const AiDaoToken = await ethers.getContractFactory("AiDaoToken");
     const token = await AiDaoToken.deploy();
     await token.waitForDeployment();
-    console.log(`✅ AiDaoToken deployed to: ${await token.getAddress()}`);
+    console.log(` AiDaoToken deployed to: ${await token.getAddress()}`);
 
     // Deploy Timelock (via Proxy)
     const Timelock = await ethers.getContractFactory("TimelockControllerUpgradeable");
@@ -23,7 +23,7 @@ async function main() {
         { initializer: "initialize" }
     );
     await timelock.waitForDeployment();
-    console.log(`✅ Timelock deployed to: ${await timelock.getAddress()}`);
+    console.log(` Timelock deployed to: ${await timelock.getAddress()}`);
 
     // Deploy Governor (via Proxy)
     const AiDaoGovernor = await ethers.getContractFactory("AiDaoGovernor");
@@ -33,7 +33,13 @@ async function main() {
         { initializer: "initialize" }
     );
     await governor.waitForDeployment();
-    console.log(`✅ Governor Proxy deployed to: ${await governor.getAddress()}`);
+    console.log(` Governor Proxy deployed to: ${await governor.getAddress()}`);
+
+    // Deploy AgentManager
+    const AgentManager = await ethers.getContractFactory("AgentManager", owner);
+    const agentManager = await AgentManager.deploy();
+    await agentManager.waitForDeployment();
+    console.log(` AgentManager deployed to: ${await agentManager.getAddress()}`);
 }
 
 main().catch((error) => {
