@@ -1,100 +1,201 @@
-import React, { useState, useEffect } from "react";
-import { useWeb3React } from "@web3-react/core";
-import { motion } from "framer-motion";
-import { Send, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ethers } from "ethers";
+import governorJson from "../utils/AiDaoGovernor.json"; // Replace with actual ABI file
+import tokenJson from "../utils/AiDaoToken.json"; // Replace with actual ABI file
 
-interface Message {
-  sender: "user" | "ai";
-  content: string;
-}
+const governorABI = governorJson.abi;
+const tokenABI = tokenJson.abi;
 
-const ChatbotGovernance: React.FC = () => {
-  const { active, account } = useWeb3React();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
+const governorAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
+const tokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+
+const ChatbotGovernance = () => {
+  const [provider, setProvider] =
+    useState<ethers.providers.Web3Provider | null>(null);
+  const [signer, setSigner] = useState<ethers.Signer | null>(null);
+  const [account, setAccount] = useState<string | null>(null);
+  const [governor, setGovernor] = useState<ethers.Contract | null>(null);
+  const [token, setToken] = useState<ethers.Contract | null>(null);
+  const [tokenBalance, setTokenBalance] = useState<string>("0");
+  const [proposals, setProposals] = useState<any[]>([]);
+  const [newProposal, setNewProposal] = useState({
+    description: "",
+    targets: [],
+    values: [],
+    calldatas: [],
+  });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (active && account) {
-      // Fetch initial DAO data or perform any necessary setup
+    const initWeb3 = async () => {
+      if (!window.ethereum) {
+        alert("Please install MetaMask!");
+        return;
+      }
+
+      const web3Provider = new ethers.providers.Web3Provider(window.ethereum);
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+      const web3Signer = web3Provider.getSigner();
+      const userAccount = await web3Signer.getAddress();
+
+      const governorContract = new ethers.Contract(
+        governorAddress,
+        governorABI,
+        web3Signer
+      );
+      const tokenContract = new ethers.Contract(
+        tokenAddress,
+        tokenABI,
+        web3Signer
+      );
+
+      setProvider(web3Provider);
+      setSigner(web3Signer);
+      setAccount(userAccount);
+      setGovernor(governorContract);
+      setToken(tokenContract);
+
+      const balance = await tokenContract.balanceOf(userAccount);
+      setTokenBalance(ethers.utils.formatEther(balance));
+
+      fetchProposals(governorContract);
+    };
+
+    initWeb3();
+  }, []);
+
+  const fetchProposals = async (govContract: ethers.Contract) => {
+    try {
+      const filter = govContract.filters.ProposalCreated();
+      const events = await govContract.queryFilter(filter);
+
+      const proposalsArray = events.map((event) => ({
+        id: event.args ? event.args.proposalId.toString() : "undefined",
+        description: event.args ? event.args.description : "No description",
+      }));
+
+      setProposals(proposalsArray);
+    } catch (error) {
+      console.error("Error fetching proposals:", error);
     }
-  }, [active, account]);
+  };
 
-  const handleSendMessage = async () => {
-    if (!input.trim()) return;
+  const createProposal = async () => {
+    if (!governor || !signer) return;
 
-    const userMessage: Message = { sender: "user", content: input };
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
-    setInput("");
     setLoading(true);
-
-    // Process the user's command
-    const aiResponse = await processCommand(input);
-    const aiMessage: Message = { sender: "ai", content: aiResponse };
-    setMessages((prevMessages) => [...prevMessages, aiMessage]);
-    setLoading(false);
-  };
-
-  const processCommand = async (command: string): Promise<string> => {
-    // This is a mock implementation. Replace with actual logic and smart contract interactions.
-    if (command.toLowerCase().includes("submit a proposal")) {
-      return "Proposal submitted successfully. Proposal ID: #1234";
-    } else if (command.toLowerCase().includes("vote")) {
-      return "Vote cast successfully on Proposal #3";
-    } else if (command.toLowerCase().includes("check the status")) {
-      return "Proposal #5 is currently active with 65% YES votes and 35% NO votes.";
-    } else {
-      return "I'm sorry, I didn't understand that command. Please try again.";
+    try {
+      const tx = await governor.propose(
+        newProposal.targets,
+        newProposal.values,
+        newProposal.calldatas,
+        newProposal.description
+      );
+      await tx.wait();
+      alert("Proposal created!");
+      fetchProposals(governor);
+    } catch (error) {
+      console.error("Error creating proposal:", error);
+    } finally {
+      setLoading(false);
     }
   };
-  
+
+  const voteOnProposal = async (proposalId: string, support: boolean) => {
+    if (!governor || !signer) return;
+
+    setLoading(true);
+    try {
+      const tx = await governor.castVote(
+        ethers.BigNumber.from(proposalId),
+        support ? 1 : 0
+      );
+      await tx.wait();
+      alert("Vote submitted!");
+    } catch (error) {
+      console.error("Error voting:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col items-center h-screen bg-gray-900 text-white p-6">
-      <motion.h1
-        className="text-3xl font-bold mb-4 text-center"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        Chatbot Governance Interface
-      </motion.h1>
-      <div className="w-full max-w-2xl bg-gray-800 rounded-lg p-4 h-96 overflow-y-auto mb-4 shadow-lg">
-        {messages.map((message, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, x: message.sender === "user" ? 50 : -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            className={`mb-2 flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <span
-              className={`inline-block rounded-lg px-4 py-2 text-sm shadow-md max-w-xs ${
-                message.sender === "user" ? "bg-blue-500 text-white" : "bg-gray-600 text-white"
-              }`}
-            >
-              {message.content}
-            </span>
-          </motion.div>
-        ))}
-        {loading && (
-          <div className="flex justify-center items-center mt-2">
-            <Loader2 className="animate-spin text-white" size={24} />
-          </div>
-        )}
+    <div className="p-6 bg-gray-900 text-white min-h-screen flex flex-col items-center">
+      <h1 className="text-3xl font-bold mb-4">Chatbot Governance</h1>
+      <div className="bg-gray-800 p-4 rounded-md w-full max-w-lg">
+        <p>
+          <strong>Connected Account:</strong> {account}
+        </p>
+        <p>
+          <strong>Your Token Balance:</strong> {tokenBalance} ADT
+        </p>
       </div>
 
-      <div className="w-full max-w-2xl flex">
+      {/* Create Proposal */}
+      <div className="bg-gray-800 p-4 rounded-md w-full max-w-lg mt-6">
+        <h2 className="text-xl font-semibold">Create Proposal</h2>
         <input
           type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Enter your command..."
-          className="flex-grow border border-gray-700 bg-gray-700 rounded-l px-4 py-2 text-white focus:outline-none"
+          placeholder="Proposal Description"
+          className="p-2 bg-gray-700 rounded w-full mt-2"
+          onChange={(e) =>
+            setNewProposal({ ...newProposal, description: e.target.value })
+          }
+          disabled={loading}
         />
         <button
-          onClick={handleSendMessage}
-          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-r flex items-center"
+          className={`mt-3 px-4 py-2 rounded w-full ${
+            loading
+              ? "bg-gray-600 cursor-not-allowed"
+              : "bg-blue-500 hover:bg-blue-600"
+          }`}
+          onClick={createProposal}
+          disabled={loading}
         >
-          {loading ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
+          {loading ? "Submitting..." : "Submit Proposal"}
         </button>
+      </div>
+
+      {/* Active Proposals */}
+      <div className="bg-gray-800 p-4 rounded-md w-full max-w-lg mt-6">
+        <h2 className="text-xl font-semibold">Active Proposals</h2>
+        {proposals.length === 0 ? (
+          <p className="text-gray-400">No active proposals.</p>
+        ) : (
+          <ul>
+            {proposals.map((proposal) => (
+              <li key={proposal.id} className="bg-gray-700 p-4 rounded my-2">
+                <p>
+                  <strong>{proposal.description}</strong>
+                </p>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    className={`px-3 py-1 rounded ${
+                      loading
+                        ? "bg-gray-600 cursor-not-allowed"
+                        : "bg-green-500 hover:bg-green-600"
+                    }`}
+                    onClick={() => voteOnProposal(proposal.id, true)}
+                    disabled={loading}
+                  >
+                    {loading ? "Voting..." : "Vote Yes"}
+                  </button>
+                  <button
+                    className={`px-3 py-1 rounded ${
+                      loading
+                        ? "bg-gray-600 cursor-not-allowed"
+                        : "bg-red-500 hover:bg-red-600"
+                    }`}
+                    onClick={() => voteOnProposal(proposal.id, false)}
+                    disabled={loading}
+                  >
+                    {loading ? "Voting..." : "Vote No"}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
